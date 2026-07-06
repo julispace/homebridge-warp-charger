@@ -1,0 +1,9 @@
+src/
+test/
+.github/
+.vscode/
+tsconfig.json
+eslint.config.js
+nodemon.json
+AGENTS.md
+STATUS.md

@@ -1,0 +1,51 @@
+{
+  "name": "homebridge-warp-homekit",
+  "displayName": "Warp HomeKit",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Homebridge platform plugin for Warp energy management and EV chargers via HTTP API.",
+  "author": "Julius",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/julius/warp-homekit#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/julius/warp-homekit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/julius/warp-homekit/issues"
+  },
+  "keywords": [
+    "homebridge-plugin",
+    "homebridge",
+    "warp",
+    "http",
+    "ev-charger"
+  ],
+  "main": "dist/index.js",
+  "engines": {
+    "node": "^22.10.0 || ^24.0.0",
+    "homebridge": "^1.8.0 || ^2.0.0"
+  },
+  "scripts": {
+    "build": "rimraf ./dist && tsc",
+    "lint": "eslint . --max-warnings=0",
+    "test": "npm run lint && npm run build",
+    "prepublishOnly": "npm run test",
+    "watch": "npm run build && npm link && nodemon"
+  },
+  "dependencies": {
+    "homebridge-lib": "^8.0.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^25.6.0",
+    "eslint": "^10.3.0",
+    "homebridge": "^2.0.0",
+    "nodemon": "^3.1.14",
+    "rimraf": "^6.1.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.2"
+  }
+}

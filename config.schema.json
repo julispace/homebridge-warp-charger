@@ -1,0 +1,95 @@
+{
+  "pluginAlias": "WarpHomekit",
+  "pluginType": "platform",
+  "singular": true,
+  "strictValidation": false,
+  "schema": {
+    "type": "object",
+    "required": ["name"],
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "default": "Warp"
+      },
+      "confirmedDevices": {
+        "title": "Configured Devices",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "title": "WARP Device",
+          "required": ["id", "address"],
+          "properties": {
+            "id": {
+              "title": "Device ID",
+              "type": "string",
+              "minLength": 1,
+              "description": "Stable unique identifier used by Homebridge to persist this accessory."
+            },
+            "address": {
+              "title": "Network Address",
+              "type": "string",
+              "minLength": 1,
+              "description": "IP address or DNS hostname used to reach the Warp HTTP API."
+            },
+            "enabled": {
+              "title": "Enabled",
+              "type": "boolean",
+              "default": false,
+              "description": "Disabled devices remain in config but are ignored by the plugin runtime."
+            },
+            "apiProtocol": {
+              "title": "API Protocol",
+              "type": "string",
+              "default": "http",
+              "condition": {
+                "functionBody": "return model.confirmedDevices[arrayIndices[0]].enabled === true;"
+              },
+              "oneOf": [
+                {
+                  "title": "http",
+                  "enum": ["http"]
+                },
+                {
+                  "title": "https",
+                  "enum": ["https"]
+                }
+              ]
+            },
+            "apiPort": {
+              "title": "API Port",
+              "type": "integer",
+              "minimum": 1,
+              "condition": {
+                "functionBody": "return model.confirmedDevices[arrayIndices[0]].enabled === true;"
+              }
+            },
+            "apiUsername": {
+              "title": "API Username",
+              "type": "string",
+              "default": "",
+              "condition": {
+                "functionBody": "return model.confirmedDevices[arrayIndices[0]].enabled === true;"
+              }
+            },
+            "apiPassword": {
+              "title": "API Password",
+              "type": "string",
+              "default": "",
+              "condition": {
+                "functionBody": "return model.confirmedDevices[arrayIndices[0]].enabled === true;"
+              }
+            }
+          }
+        },
+        "default": []
+      },
+      "pollInterval": {
+        "title": "Poll Interval (s)",
+        "type": "integer",
+        "default": 60,
+        "minimum": 1
+      }
+    }
+  }
+}
