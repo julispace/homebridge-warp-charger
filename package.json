@@ -1,8 +1,8 @@
 {
   "name": "homebridge-warp-homekit",
-  "displayName": "Warp HomeKit",
+  "displayName": "Warp Homebridge Plugin",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": false,
   "description": "Homebridge platform plugin for Tinkerforge WARP EV chargers via HTTP API.",
   "author": "Julius",

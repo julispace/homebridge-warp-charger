@@ -177,7 +177,6 @@ export class WarpHomekitPlatform implements DynamicPlatformPlugin {
           availableDefinitionIds,
           loadApiState,
         });
-        this.log.debug(`Updated accessory mapping for confirmed device: ${device.id}`);
         continue;
       }
 
