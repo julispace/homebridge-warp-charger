@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an improvement for the Warp HomeKit plugin
+about: Suggest an improvement for the Warp homebridge plugin
 title: ''
 labels: enhancement
 assignees: ''

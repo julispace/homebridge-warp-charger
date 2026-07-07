@@ -4,23 +4,24 @@
   "type": "module",
   "version": "0.1.0",
   "private": true,
-  "description": "Homebridge platform plugin for Warp energy management and EV chargers via HTTP API.",
+  "description": "Homebridge platform plugin for Tinkerforge WARP EV chargers via HTTP API.",
   "author": "Julius",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/julius/warp-homekit#readme",
+  "homepage": "https://github.com/julispace/homebridge-warp-charger#README",
   "repository": {
     "type": "git",
-    "url": "https://github.com/julius/warp-homekit.git"
+    "url": "https://github.com/julispace/homebridge-warp-charger.git"
   },
   "bugs": {
-    "url": "https://github.com/julius/warp-homekit/issues"
+    "url": "https://github.com/julispace/homebridge-warp-charger/issues"
   },
   "keywords": [
     "homebridge-plugin",
     "homebridge",
     "warp",
     "http",
-    "ev-charger"
+    "ev-charger",
+    "tinkerforge"
   ],
   "main": "dist/index.js",
   "engines": {

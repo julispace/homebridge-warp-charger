@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a problem with the Warp HomeKit plugin
+about: Report a problem with the Warp homebridge plugin
 title: ''
 labels: bug
 assignees: ''

@@ -83,15 +83,7 @@ type AccessoryDefinitionContext = {
 const ACCESSORY_DEFINITION_CATALOG: AccessoryDefinitionCatalog = {
   // Direct service definitions. Add new services here.
   services: [
-    /*{
-      id: 'primary-outlet',
-      service: 'Outlet',
-      enabledWhen: {
-        profilePrimary: 'outlet',
-      },
-      bindOn: true,
-      bindOutletInUse: true,
-    },*/
+
     {
       id: 'primary-switch',
       service: 'Switch',
