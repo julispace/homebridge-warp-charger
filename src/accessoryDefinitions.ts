@@ -134,7 +134,7 @@ const ACCESSORY_DEFINITION_CATALOG: AccessoryDefinitionCatalog = {
         type: 'feature',
         feature: 'evse',
       },
-      nameSuffix: 'EVSE State Not Connected',
+      nameSuffix: 'EVSE: No EV connected',
       subType: 'evse-state-not-connected',
       valueSources: [
         {
@@ -158,7 +158,7 @@ const ACCESSORY_DEFINITION_CATALOG: AccessoryDefinitionCatalog = {
         type: 'feature',
         feature: 'evse',
       },
-      nameSuffix: 'EVSE State Waiting For Release',
+      nameSuffix: 'EVSE Waiting For Release',
       subType: 'evse-state-waiting-for-release',
       valueSources: [
         {
@@ -182,7 +182,7 @@ const ACCESSORY_DEFINITION_CATALOG: AccessoryDefinitionCatalog = {
         type: 'feature',
         feature: 'evse',
       },
-      nameSuffix: 'EVSE State Ready',
+      nameSuffix: 'EVSE: Ready',
       subType: 'evse-state-ready',
       valueSources: [
         {
@@ -206,7 +206,7 @@ const ACCESSORY_DEFINITION_CATALOG: AccessoryDefinitionCatalog = {
         type: 'feature',
         feature: 'evse',
       },
-      nameSuffix: 'EVSE State Charging',
+      nameSuffix: 'EVSE: Charging',
       subType: 'evse-state-charging',
       valueSources: [
         {
@@ -231,7 +231,7 @@ const ACCESSORY_DEFINITION_CATALOG: AccessoryDefinitionCatalog = {
         path: 'p14a_enwg/config',
         key: 'enable',
       },
-      nameSuffix: 'ENWG §14a Limit',
+      nameSuffix: 'ENWG §14a Limit active',
       subType: 'p14a-limit',
       valueSources: [
         {
@@ -295,8 +295,6 @@ const ACCESSORY_DEFINITION_CATALOG: AccessoryDefinitionCatalog = {
       defaultCharacteristics: {
         Consumption: 0,
         TotalConsumption: 0,
-        ElectricCurrent: 0,
-        Voltage: 0,
       },
     },
   ],
