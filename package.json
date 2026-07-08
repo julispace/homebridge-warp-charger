@@ -1,20 +1,8 @@
 {
-  "name": "homebridge-warp-homekit",
-  "displayName": "Warp Homebridge Plugin",
-  "type": "module",
+  "name": "homebridge-warp-charger",
   "version": "0.1.1",
   "private": false,
   "description": "Homebridge platform plugin for Tinkerforge WARP EV chargers via HTTP API.",
-  "author": "Julius",
-  "license": "Apache-2.0",
-  "homepage": "https://github.com/julispace/homebridge-warp-charger#README",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/julispace/homebridge-warp-charger.git"
-  },
-  "bugs": {
-    "url": "https://github.com/julispace/homebridge-warp-charger/issues"
-  },
   "keywords": [
     "homebridge-plugin",
     "homebridge",
@@ -23,11 +11,19 @@
     "ev-charger",
     "tinkerforge"
   ],
-  "main": "dist/index.js",
-  "engines": {
-    "node": "^22.10.0 || ^24.0.0",
-    "homebridge": "^1.8.0 || ^2.0.0"
+  "homepage": "https://github.com/julispace/homebridge-warp-charger#README",
+  "bugs": {
+    "url": "https://github.com/julispace/homebridge-warp-charger/issues"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/julispace/homebridge-warp-charger.git"
+  },
+  "license": "Apache-2.0",
+  "author": "Julius",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "build": "rimraf ./dist && tsc",
     "lint": "eslint . --max-warnings=0",
@@ -48,5 +44,10 @@
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.2"
-  }
+  },
+  "engines": {
+    "node": "^22.10.0 || ^24.0.0",
+    "homebridge": "^1.8.0 || ^2.0.0"
+  },
+  "displayName": "Warp Charger Homebridge Plugin"
 }
