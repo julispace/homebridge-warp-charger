@@ -9,10 +9,11 @@ This exposes the following services:
 - EVSE Error State
 - EVSE Charging State
 
-Due to HomeKit currently not directly supporting EV Chargers or anything reasonably close, I had to do some workarounds.
-The states are created as contact sensors, with one per state for enum states, and the energy consumption is a custom service. 
+Due to HomeKit currently not directly supporting EV Chargers or anything reasonably close, this plugin uses some workarounds.
+The states are created as contact sensors, with one per state for enum states. 
+Consumption statistics are a custom service.
 
-
+Please refer to the [WARP Documentation](https://docs.warp-charger.com/en/docs/smart_home/homekit/) for installation and configuration.  
 
 ## Contributing
 
