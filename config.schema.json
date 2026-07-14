@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "WarpHomekit",
+  "pluginAlias": "warpHomebridge",
   "pluginType": "platform",
   "singular": true,
   "strictValidation": false,
