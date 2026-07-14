@@ -1,13 +1,23 @@
+/**
+ * Accessory context building and runtime state management.
+ * Maps device metadata to accessory profiles and manages characteristic handlers.
+ * @module platformAccessory
+ */
+
 import type { CharacteristicValue, PlatformAccessory } from 'homebridge';
 
 import { applyAccessoryDefinitions } from './accessoryDefinitions.js';
 import type { ConfirmedDeviceConfig, ProbeMetadata } from './types.js';
 import type { WarpHomekitPlatform } from './platform.js';
 
+/** Capability hints indicating EV charger functionality */
 const EV_CHARGER_CAPABILITIES = ['ev_charger', 'evse', 'charger'];
+/** Capability hints indicating power/energy metering */
 const ENERGY_CAPABILITIES = ['power', 'energy', 'meter'];
+/** Capability hints indicating battery/backup functionality */
 const BATTERY_CAPABILITIES = ['battery', 'backup'];
 
+/** Accessory context stored in Homebridge's accessory cache */
 export type AccessoryContextDevice = {
   id: string;
   address: string;
@@ -24,6 +34,7 @@ export type AccessoryContextDevice = {
   };
 };
 
+/** Normalizes capability string to lowercase trimmed format */
 function normalizeCapabilityName(value: unknown): string | undefined {
   if (typeof value !== 'string') {
     return undefined;
@@ -56,6 +67,7 @@ function readMetadataString(value: unknown): string | undefined {
   return normalizedValue.length > 0 ? normalizedValue : undefined;
 }
 
+/** Determines accessory profile based on device capabilities and metadata hints */
 function profileFromMetadata(capabilities: string[], metadata: ProbeMetadata | undefined) {
   const modelHint = readMetadataString(metadata?.type)?.toLowerCase();
   const hasEvChargerCapability = hasAnyCapability(capabilities, EV_CHARGER_CAPABILITIES)
@@ -69,6 +81,10 @@ function profileFromMetadata(capabilities: string[], metadata: ProbeMetadata | u
   };
 }
 
+/**
+ * Builds accessory context from device configuration and metadata.
+ * Maps device information to HomeKit accessory properties and profile.
+ */
 export function buildAccessoryContext(
   confirmedDevice: ConfirmedDeviceConfig,
   metadata: ProbeMetadata | undefined,
@@ -96,6 +112,7 @@ export function buildAccessoryContext(
   };
 }
 
+/** Normalizes and validates cached accessory context from previous runs */
 function normalizeAccessoryContext(accessory: PlatformAccessory): AccessoryContextDevice {
   const device = accessory.context.device as Partial<AccessoryContextDevice> | undefined;
   const id = typeof device?.id === 'string' && device.id.length > 0 ? device.id : accessory.UUID;
@@ -128,6 +145,10 @@ function normalizeAccessoryContext(accessory: PlatformAccessory): AccessoryConte
   };
 }
 
+/**
+ * Platform accessory handler managing services and characteristic handlers.
+ * Coordinates between Homebridge, accessory definitions, and runtime state.
+ */
 export class WarpPlatformAccessory {
   private readonly runtimeState = {
     on: false,

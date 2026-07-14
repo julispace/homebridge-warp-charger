@@ -1,3 +1,9 @@
+/**
+ * Accessory service definitions - single source of truth for mapping devices to HomeKit services.
+ * Handles availability checks, value source mapping, and characteristic updates.
+ * @module accessoryDefinitions
+ */
+
 import type { CharacteristicValue, Logging, PlatformAccessory, Service } from 'homebridge';
 
 import type { WarpHomekitPlatform } from './platform.js';
@@ -14,6 +20,7 @@ type CharacteristicKey =
   | 'Voltage'
   | 'ContactSensorState';
 
+/** Value source configuration for mapping API data to characteristics */
 type DefinitionValueSource = {
   characteristic: CharacteristicKey;
   source: 'jsonKey' | 'jsonBool' | 'jsonEnum';
@@ -26,6 +33,7 @@ type DefinitionValueSource = {
   falseValue?: number;
 };
 
+/** Availability check configuration. A accessory shall not be shown when this is unavailable. */
 type AccessoryDefinitionCheck = {
   type: DefinitionCheckType;
   feature?: string;
@@ -33,6 +41,7 @@ type AccessoryDefinitionCheck = {
   key?: string;
 };
 
+/** Service definition mapping device capabilities to HomeKit services */
 type AccessoryServiceDefinition = {
   id: string;
   service: ServiceTypeKey;
@@ -52,10 +61,15 @@ type AccessoryServiceDefinition = {
   defaultCharacteristics?: Record<string, CharacteristicValue>;
 };
 
+/** Export for external use */
+export type { AccessoryServiceDefinition };
+
+/** Complete accessory definition catalog */
 type AccessoryDefinitionCatalog = {
   services: AccessoryServiceDefinition[];
 };
 
+/** Context for refreshing accessory values from API */
 type AccessoryDefinitionValueRefreshContext = {
   platform: WarpHomekitPlatform;
   accessory: PlatformAccessory;
@@ -64,6 +78,7 @@ type AccessoryDefinitionValueRefreshContext = {
   loadApiState(path: string): Promise<unknown | undefined>;
 };
 
+/** Runtime handlers for accessory characteristic callbacks */
 type AccessoryRuntimeHandlers = {
   setOn(value: CharacteristicValue): Promise<void>;
   getOn(): Promise<CharacteristicValue>;
@@ -231,7 +246,7 @@ const ACCESSORY_DEFINITION_CATALOG: AccessoryDefinitionCatalog = {
         path: 'p14a_enwg/config',
         key: 'enable',
       },
-      nameSuffix: 'ENWG §14a Limit active',
+      nameSuffix: 'ENWG 14a Limit Active',
       subType: 'p14a-limit',
       valueSources: [
         {
@@ -300,10 +315,7 @@ const ACCESSORY_DEFINITION_CATALOG: AccessoryDefinitionCatalog = {
   ],
 };
 
-function buildAccessoryDefinitions(catalog: AccessoryDefinitionCatalog): AccessoryServiceDefinition[] {
-  return [...catalog.services];
-}
-
+/** Clones accessory definitions for safe mutation */
 function cloneAccessoryDefinitions(definitions: AccessoryServiceDefinition[]): AccessoryServiceDefinition[] {
   return definitions.map((definition) => ({
     ...definition,
@@ -315,12 +327,15 @@ function cloneAccessoryDefinitions(definitions: AccessoryServiceDefinition[]): A
   }));
 }
 
-const ACCESSORY_DEFINITIONS = buildAccessoryDefinitions(ACCESSORY_DEFINITION_CATALOG);
+/** Immutable reference to accessory definitions from catalog */
+const ACCESSORY_DEFINITIONS = [...ACCESSORY_DEFINITION_CATALOG.services];
 
+/** Type guard for checking if value is a plain object */
 function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
+/** Maps service type key to Homebridge service class */
 function readServiceType(platform: WarpHomekitPlatform, serviceType: ServiceTypeKey): unknown {
   switch (serviceType) {
   case 'Outlet':
@@ -338,10 +353,31 @@ function readServiceType(platform: WarpHomekitPlatform, serviceType: ServiceType
   }
 }
 
-function readServiceName(device: AccessoryContextDevice, definition: AccessoryServiceDefinition): string {
-  return definition.nameSuffix ? `${definition.nameSuffix} ${device.name}` : device.name;
+/**
+ * Sanitizes accessory name for HomeKit compatibility.
+ * HomeKit requires names to start/end with letter or number, and only allows:
+ * letters, numbers, spaces, apostrophes, and common punctuation.
+ */
+function sanitizeHomeKitName(name: string): string {
+  // Remove unsupported characters (keep letters, numbers, spaces, apostrophes, hyphens, colons, commas, periods)
+  let sanitized = name.replace(/[^\w\s',:.\-\u00C0-\u024F]/g, '');
+  
+  // Collapse multiple spaces
+  sanitized = sanitized.replace(/\s+/g, ' ').trim();
+  
+  // Remove leading/trailing non-alphanumeric characters
+  sanitized = sanitized.replace(/^[^\w]+/, '').replace(/[^\w]+$/, '');
+  
+  return sanitized || 'Accessory';
 }
 
+/** Builds service display name with optional suffix */
+function readServiceName(device: AccessoryContextDevice, definition: AccessoryServiceDefinition): string {
+  const baseName = definition.nameSuffix ? `${definition.nameSuffix} ${device.name}` : device.name;
+  return sanitizeHomeKitName(baseName);
+}
+
+/** Checks if definition should be enabled based on device profile and custom services */
 function shouldEnableDefinition(context: Omit<AccessoryDefinitionContext, 'definitions'>, definition: AccessoryServiceDefinition): boolean {
   if (!definition.enabledWhen) {
     return true;
@@ -368,6 +404,7 @@ function shouldEnableDefinition(context: Omit<AccessoryDefinitionContext, 'defin
   return true;
 }
 
+/** Maps characteristic key to Homebridge characteristic class */
 function readCharacteristic(platform: WarpHomekitPlatform, key: string): unknown {
   switch (key) {
   case 'Name':
@@ -461,6 +498,10 @@ async function evaluateCheck(
   return false;
 }
 
+/**
+ * Resolves which accessory definitions are available for a device.
+ * Evaluates feature checks and API-based availability conditions.
+ */
 export async function resolveAvailableAccessoryDefinitionIds(
   options: AvailableDefinitionResolutionOptions,
 ): Promise<Set<string>> {
@@ -496,17 +537,14 @@ function updateCharacteristicIfPresent(service: Service, characteristic: any, va
   service.getCharacteristic(characteristic).updateValue(value);
 }
 
-function resolveDefinitionValueSources(definition: AccessoryServiceDefinition): DefinitionValueSource[] {
-  return definition.valueSources ?? [];
-}
-
+/** Applies a single definition to create or update accessory service */
 function applyDefinition(context: Omit<AccessoryDefinitionContext, 'definitions'>, definition: AccessoryServiceDefinition): void {
   const serviceType = readServiceType(context.platform, definition.service);
   if (!serviceType) {
     return;
   }
 
-  const valueSources = resolveDefinitionValueSources(definition);
+  const valueSources = definition.valueSources ?? [];
 
   const existingService = definition.subType
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -663,7 +701,7 @@ async function refreshDefinitionValues(
   context: AccessoryDefinitionValueRefreshContext,
   definition: AccessoryServiceDefinition,
 ): Promise<void> {
-  const valueSources = resolveDefinitionValueSources(definition);
+  const valueSources = definition.valueSources ?? [];
   if (valueSources.length === 0) {
     return;
   }
@@ -701,6 +739,10 @@ async function refreshDefinitionValues(
   }
 }
 
+/**
+ * Refreshes accessory characteristic values from device API state.
+ * Updates characteristics for all available definitions using configured value sources.
+ */
 export async function refreshAccessoryDefinitionValues(
   context: AccessoryDefinitionValueRefreshContext,
 ): Promise<void> {
@@ -715,12 +757,17 @@ export async function refreshAccessoryDefinitionValues(
   }
 }
 
+/** Loads accessory definitions from the catalog */
 export async function loadAccessoryDefinitions(log: Pick<Logging, 'debug' | 'warn'>): Promise<AccessoryServiceDefinition[]> {
   const definitions = cloneAccessoryDefinitions(ACCESSORY_DEFINITIONS);
   log.debug(`Loaded ${definitions.length} accessory definition(s) from TypeScript catalog`);
   return definitions;
 }
 
+/**
+ * Applies accessory definitions to create and configure HomeKit services.
+ * Adds or removes services based on availability and profile requirements.
+ */
 export function applyAccessoryDefinitions(context: AccessoryDefinitionContext): void {
   const applyContext = {
     platform: context.platform,
@@ -733,5 +780,3 @@ export function applyAccessoryDefinitions(context: AccessoryDefinitionContext): 
     applyDefinition(applyContext, definition);
   }
 }
-
-export type { AccessoryServiceDefinition };

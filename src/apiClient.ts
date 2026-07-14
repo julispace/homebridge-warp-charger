@@ -1,3 +1,8 @@
+/**
+ * HTTP/HTTPS API client for Warp devices with Digest authentication and retry logic.
+ * @module apiClient
+ */
+
 import { createHash, randomBytes } from 'node:crypto';
 
 type Logger = {
@@ -5,6 +10,7 @@ type Logger = {
   warn(message: string, ...parameters: unknown[]): void;
 };
 
+/** Configuration for the API client including timeouts and retry behavior */
 type ApiClientConfig = {
   timeout: number;
   retryCount: number;
@@ -90,6 +96,7 @@ function sleep(duration: number): Promise<void> {
   });
 }
 
+/** Custom error for API client operations with optional retry support */
 export class WarpApiClientError extends Error {
   constructor(
     message: string,
@@ -101,11 +108,19 @@ export class WarpApiClientError extends Error {
   }
 }
 
+/**
+ * API client for Warp devices with support for:
+ * - HTTP and HTTPS protocols
+ * - Digest authentication
+ * - Automatic retries with exponential backoff
+ * - Request timeouts
+ */
 export class WarpApiClient {
   private readonly digestChallenges = new Map<string, DigestChallenge>();
 
   constructor(private readonly config: ApiClientConfig) {}
 
+  /** Performs a GET request expecting JSON response */
   async getJson<T>(options: Omit<RequestOptions, 'method' | 'body'>): Promise<T> {
     return this.requestJson<T>({
       ...options,
@@ -113,6 +128,7 @@ export class WarpApiClient {
     });
   }
 
+  /** Safe GET request that returns undefined on error instead of throwing */
   async tryGetJson<T>(options: Omit<RequestOptions, 'method' | 'body'>): Promise<T | undefined> {
     try {
       return await this.getJson<T>(options);
@@ -188,7 +204,6 @@ export class WarpApiClient {
   private async fetchWithTimeout(requestState: ResolvedRequest, timeout: number): Promise<Response> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
-    //this.config.log.debug(`HTTP API request -> ${requestState.method} ${requestState.url}`);
 
     try {
       const response = await fetch(requestState.url, {
@@ -197,8 +212,6 @@ export class WarpApiClient {
         body: requestState.body,
         signal: controller.signal,
       });
-
-      //this.config.log.debug(`HTTP API response <- ${response.status} ${requestState.method} ${requestState.url}`);
 
       return response;
     } catch (error) {

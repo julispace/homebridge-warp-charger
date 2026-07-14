@@ -1,3 +1,8 @@
+/**
+ * Main platform implementation - manages accessories, configuration, and periodic polling.
+ * @module platform
+ */
+
 import type { API, Characteristic, DynamicPlatformPlugin, Logging, PlatformAccessory, PlatformConfig, Service } from 'homebridge';
 
 import { EveHomeKitTypes } from 'homebridge-lib/EveHomeKitTypes';
@@ -14,11 +19,19 @@ import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 import type { ConfirmedDeviceConfig, ProbeMetadata, RuntimeConfig, WarpPlatformConfig } from './types.js';
 import type { AccessoryServiceDefinition } from './accessoryDefinitions.js';
 
+/** Default polling interval in seconds */
 const DEFAULT_POLL_INTERVAL = 60;
+/** Default HTTP request timeout in milliseconds */
 const DEFAULT_HTTP_PROBE_TIMEOUT = 3000;
+/** Default number of retry attempts for failed API requests */
 const DEFAULT_API_RETRY_COUNT = 2;
+/** Default delay in milliseconds between retries (with exponential backoff) */
 const DEFAULT_API_RETRY_DELAY = 500;
 
+/**
+ * Homebridge platform plugin for Warp energy management and EV charger devices.
+ * Exposes devices to HomeKit via HTTP/HTTPS API polling.
+ */
 export class WarpHomekitPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;
   public readonly Characteristic: typeof Characteristic;
@@ -30,7 +43,7 @@ export class WarpHomekitPlatform implements DynamicPlatformPlugin {
   private pollTimer: ReturnType<typeof setInterval> | undefined;
   private reconciliationInProgress = false;
 
-  // This stays available for later custom energy characteristics.
+  /** Custom services and characteristics from homebridge-lib for Eve Energy support */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public readonly CustomServices: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -70,6 +83,20 @@ export class WarpHomekitPlatform implements DynamicPlatformPlugin {
     });
   }
 
+  /** Builds API request options from device configuration */
+  private buildApiRequestOptions(device: ConfirmedDeviceConfig, path: string) {
+    return {
+      protocol: device.apiProtocol ?? 'http' as const,
+      host: device.address,
+      port: device.apiPort ?? 80,
+      username: device.apiUsername,
+      password: device.apiPassword,
+      path: path.startsWith('/') ? path : `/${path}`,
+      timeout: DEFAULT_HTTP_PROBE_TIMEOUT,
+    };
+  }
+
+  /** Called by Homebridge to restore cached accessories on startup */
   configureAccessory(accessory: PlatformAccessory) {
     this.log.info('Loading accessory from cache:', accessory.displayName);
     this.accessories.set(accessory.UUID, accessory);
@@ -136,9 +163,11 @@ export class WarpHomekitPlatform implements DynamicPlatformPlugin {
   }
 
   private async reconcileAccessories() {
+    // Filter to only enabled devices
     const enabledDevices = this.runtimeConfig.confirmedDevices.filter((device) => device.enabled !== false);
     const desiredUuids = new Set<string>();
 
+    // Create or update accessories for each enabled device
     for (const device of enabledDevices) {
       const metadata = await this.resolveMetadataForConfirmedDevice(device);
       const availableDefinitionIds = await this.resolveAvailableDefinitionIds(device, metadata);
@@ -146,26 +175,22 @@ export class WarpHomekitPlatform implements DynamicPlatformPlugin {
       const uuid = this.api.hap.uuid.generate(`warp-homekit:${device.id}`);
       desiredUuids.add(uuid);
 
+      // Cache API state to avoid duplicate requests during reconciliation
       const stateCache = new Map<string, unknown | undefined>();
       const loadApiState = async (path: string) => {
         if (stateCache.has(path)) {
           return stateCache.get(path);
         }
 
-        const state = await this.apiClient.tryGetJson<unknown>({
-          protocol: device.apiProtocol ?? 'http',
-          host: device.address,
-          port: device.apiPort ?? 80,
-          username: device.apiUsername,
-          password: device.apiPassword,
-          path: path.startsWith('/') ? path : `/${path}`,
-          timeout: DEFAULT_HTTP_PROBE_TIMEOUT,
-        });
+        const state = await this.apiClient.tryGetJson<unknown>(
+          this.buildApiRequestOptions(device, path),
+        );
 
         stateCache.set(path, state);
         return state;
       };
 
+      // Update existing accessory or create new one
       const existingAccessory = this.accessories.get(uuid);
       if (existingAccessory) {
         existingAccessory.context.device = context;
@@ -195,6 +220,7 @@ export class WarpHomekitPlatform implements DynamicPlatformPlugin {
       this.log.info(`Created accessory for confirmed device: ${context.name} (${device.id})`);
     }
 
+    // Remove accessories no longer backed by an enabled device
     for (const [uuid, accessory] of this.accessories) {
       if (desiredUuids.has(uuid)) {
         continue;
@@ -246,14 +272,7 @@ export class WarpHomekitPlatform implements DynamicPlatformPlugin {
   }
 
   private async resolveMetadataForConfirmedDevice(device: ConfirmedDeviceConfig): Promise<ProbeMetadata | undefined> {
-    return fetchDeviceInfo(this.apiClient, {
-      protocol: device.apiProtocol ?? 'http',
-      host: device.address,
-      port: device.apiPort ?? 80,
-      username: device.apiUsername,
-      password: device.apiPassword,
-      timeout: DEFAULT_HTTP_PROBE_TIMEOUT,
-    });
+    return fetchDeviceInfo(this.apiClient, this.buildApiRequestOptions(device, ''));
   }
 
   private async resolveAvailableDefinitionIds(
@@ -270,15 +289,9 @@ export class WarpHomekitPlatform implements DynamicPlatformPlugin {
           return stateCache.get(path);
         }
 
-        const state = await this.apiClient.tryGetJson<unknown>({
-          protocol: device.apiProtocol ?? 'http',
-          host: device.address,
-          port: device.apiPort ?? 80,
-          username: device.apiUsername,
-          password: device.apiPassword,
-          path: path.startsWith('/') ? path : `/${path}`,
-          timeout: DEFAULT_HTTP_PROBE_TIMEOUT,
-        });
+        const state = await this.apiClient.tryGetJson<unknown>(
+          this.buildApiRequestOptions(device, path),
+        );
 
         stateCache.set(path, state);
         return state;

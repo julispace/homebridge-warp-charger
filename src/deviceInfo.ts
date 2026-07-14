@@ -1,6 +1,12 @@
+/**
+ * Device information reader - fetches metadata from documented /info/* API endpoints.
+ * @module deviceInfo
+ */
+
 import { WarpApiClient } from './apiClient.js';
 import type { ProbeMetadata } from './types.js';
 
+/** Connection parameters for device API access */
 type DeviceConnection = {
   protocol: 'http' | 'https';
   host: string;
@@ -10,6 +16,7 @@ type DeviceConnection = {
   timeout: number;
 };
 
+/** Response from /info/name endpoint */
 type InfoNameResponse = {
   name?: string;
   type?: string;
@@ -17,16 +24,22 @@ type InfoNameResponse = {
   uid?: string;
 };
 
+/** Response from /info/display_name endpoint */
 type InfoDisplayNameResponse = {
   display_name?: string;
 };
 
+/** Response from /info/version endpoint */
 type InfoVersionResponse = {
   firmware?: string;
   config?: string;
   config_type?: string;
 };
 
+/**
+ * Fetches device metadata from multiple /info/* endpoints in parallel.
+ * Returns undefined if all endpoints fail.
+ */
 export async function fetchDeviceInfo(client: WarpApiClient, connection: DeviceConnection): Promise<ProbeMetadata | undefined> {
   const [nameInfo, displayNameInfo, versionInfo, featuresInfo] = await Promise.all([
     client.tryGetJson<InfoNameResponse>({
