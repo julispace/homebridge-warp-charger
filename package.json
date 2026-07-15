@@ -1,6 +1,6 @@
 {
   "name": "homebridge-warp-charger",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": false,
   "description": "Homebridge platform plugin for Tinkerforge WARP EV chargers via HTTP API.",
   "keywords": [
