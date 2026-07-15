@@ -139,13 +139,28 @@ export class WarpApiClient {
     }
   }
 
+  /** Performs a PUT request with null body (for action endpoints that return no content) */
+  async putNull(options: Omit<RequestOptions, 'method' | 'body'>): Promise<void> {
+    const timeout = options.timeout ?? this.config.timeout;
+    await this.runWithRetries(() => this.performEmptyRequest({
+      ...options,
+      method: 'PUT',
+      body: null,
+    }, timeout));
+  }
+
   async requestJson<T>(options: RequestOptions): Promise<T> {
     const timeout = options.timeout ?? this.config.timeout;
+    return this.runWithRetries(() => this.performJsonRequest<T>(options, timeout));
+  }
+
+  /** Runs an operation with retry + exponential backoff for retryable failures */
+  private async runWithRetries<T>(operation: () => Promise<T>): Promise<T> {
     const retries = this.config.retryCount;
 
     for (let attempt = 0; attempt <= retries; attempt += 1) {
       try {
-        return await this.performJsonRequest<T>(options, timeout);
+        return await operation();
       } catch (error) {
         const apiError = this.normalizeError(error);
         const isLastAttempt = attempt === retries;
@@ -163,24 +178,38 @@ export class WarpApiClient {
     throw new WarpApiClientError('Request retry loop exited unexpectedly');
   }
 
+  /** Performs a request and validates the status without parsing a response body */
+  private async performEmptyRequest(options: RequestOptions, timeout: number): Promise<void> {
+    const response = await this.performRequest(options, timeout);
+
+    if (!response.ok) {
+      throw this.buildResponseError(options, response.status);
+    }
+  }
+
   private async performJsonRequest<T>(options: RequestOptions, timeout: number): Promise<T> {
     const response = await this.performRequest(options, timeout);
 
     if (!response.ok) {
-      const requestPath = options.path.startsWith('/') ? options.path : `/${options.path}`;
-      this.config.log.warn(
-        `HTTP API response ${response.status} for ${options.method ?? 'GET'} `
-        + `${options.protocol}://${options.host}:${options.port}${requestPath}`,
-      );
-      throw new WarpApiClientError(
-        `HTTP API returned status ${response.status}`,
-        response.status,
-        isRetryableStatus(response.status),
-      );
+      throw this.buildResponseError(options, response.status);
     }
 
     const body = await response.json();
     return body as T;
+  }
+
+  /** Logs and builds a standardized error for non-OK HTTP responses */
+  private buildResponseError(options: RequestOptions, status: number): WarpApiClientError {
+    const requestPath = options.path.startsWith('/') ? options.path : `/${options.path}`;
+    this.config.log.warn(
+      `HTTP API response ${status} for ${options.method ?? 'GET'} `
+      + `${options.protocol}://${options.host}:${options.port}${requestPath}`,
+    );
+    return new WarpApiClientError(
+      `HTTP API returned status ${status}`,
+      status,
+      isRetryableStatus(status),
+    );
   }
 
   private async performRequest(options: RequestOptions, timeout: number): Promise<Response> {

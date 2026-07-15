@@ -22,6 +22,7 @@ Stage 5: Accessory mapping and live state updates (in progress)
 - Centralized catalog in `src/accessoryDefinitions.ts`
 - Feature-based availability checks (`feature`, `apiBool`)
 - Value sources: `jsonKey`, `jsonBool`, `jsonEnum` for API-to-characteristic mapping
+- Momentary button actions via `command` (API path + null body) for start/stop charging
 - Per-state EVSE accessories using enum mapping (charger_state 0-3)
 - Energy metering via internal meter API (`meter/*`)
 - HomeKit name sanitization for compatibility
@@ -31,6 +32,8 @@ Stage 5: Accessory mapping and live state updates (in progress)
 - EVSE state sensors: Error State, Not Connected, Waiting For Release, Ready, Charging
 - ENWG 14a Limit Active sensor
 - Power Manager Active sensor
+- **Start Charging button** (Switch service, momentary)
+- **Stop Charging button** (Switch service, momentary)
 - Optional: Battery service (for backup-capable devices)
 - Optional: Eve Consumption service (power/energy metering)
 
@@ -54,11 +57,10 @@ Stage 5: Accessory mapping and live state updates (in progress)
 
 ## Known Issues & Limitations
 
-- Runtime accessory control (setOn) not yet wired to device API commands (Stage 7)
 - Limited test coverage (only platformAccessory module)
+- Cached accessories may need to be cleared after adding new services
 
 ## Next Steps
 
-- Stage 6: Enhance polling/state cache updates ✅ (mostly complete)
-- Stage 7: Wire control commands to HTTP API endpoints for charger actions
+- Stage 7: Wire additional control commands via the data-driven `command` field if needed
 - Expand test coverage to other modules

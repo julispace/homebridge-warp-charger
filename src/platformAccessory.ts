@@ -7,6 +7,7 @@
 import type { CharacteristicValue, PlatformAccessory } from 'homebridge';
 
 import { applyAccessoryDefinitions } from './accessoryDefinitions.js';
+import type { AccessoryCommand } from './accessoryDefinitions.js';
 import type { ConfirmedDeviceConfig, ProbeMetadata } from './types.js';
 import type { WarpHomekitPlatform } from './platform.js';
 
@@ -181,6 +182,7 @@ export class WarpPlatformAccessory {
         setOn: this.setOn.bind(this),
         getOn: this.getOn.bind(this),
         getOutletInUse: this.getOutletInUse.bind(this),
+        runCommand: this.runCommand.bind(this),
       },
     });
   }
@@ -199,5 +201,37 @@ export class WarpPlatformAccessory {
   async getOutletInUse(): Promise<CharacteristicValue> {
     this.platform.log.debug(`Get Characteristic OutletInUse -> ${String(this.runtimeState.inUse)}`);
     return this.runtimeState.inUse;
+  }
+
+  /**
+   * Issues a momentary API command (e.g. start/stop charging) to the backing device.
+   * The API path and payload come from the accessory definition catalog. 
+   * WARP action endpoints expect a `null` payload.
+   */
+  async runCommand(command: AccessoryCommand): Promise<void> {
+    const device = this.accessory.context.device as AccessoryContextDevice;
+    this.platform.log.info(`Running command ${command.path} for ${device.name}`);
+
+    const deviceConfig = this.platform.runtimeConfig.confirmedDevices.find((entry) => entry.id === device.id);
+    if (!deviceConfig) {
+      throw new Error(`Device configuration not found for ${device.id}`);
+    }
+
+    try {
+      await this.platform.apiClient.putNull({
+        protocol: deviceConfig.apiProtocol ?? 'http',
+        host: deviceConfig.address,
+        port: deviceConfig.apiPort ?? 80,
+        username: deviceConfig.apiUsername,
+        password: deviceConfig.apiPassword,
+        path: command.path,
+      });
+
+      this.platform.log.info(`Command ${command.path} succeeded for ${device.name}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      this.platform.log.error(`Command ${command.path} failed for ${device.name}: ${message}`);
+      throw error;
+    }
   }
 }

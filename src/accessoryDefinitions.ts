@@ -10,7 +10,7 @@ import type { WarpHomekitPlatform } from './platform.js';
 import type { AccessoryContextDevice } from './platformAccessory.js';
 import type { ProbeMetadata } from './types.js';
 
-type ServiceTypeKey = 'Outlet' | 'Switch' | 'Battery' | 'ContactSensor' | 'EveConsumption';
+type ServiceTypeKey = 'Outlet' | 'Switch' | 'Battery' | 'ContactSensor' | 'EveConsumption' | 'StatelessProgrammableSwitch';
 type CustomServiceKey = 'Consumption';
 type DefinitionCheckType = 'feature' | 'apiBool';
 type CharacteristicKey =
@@ -18,7 +18,8 @@ type CharacteristicKey =
   | 'TotalConsumption'
   | 'ElectricCurrent'
   | 'Voltage'
-  | 'ContactSensorState';
+  | 'ContactSensorState'
+  | 'ProgrammableSwitchEvent';
 
 /** Value source configuration for mapping API data to characteristics */
 type DefinitionValueSource = {
@@ -41,6 +42,16 @@ type AccessoryDefinitionCheck = {
   key?: string;
 };
 
+/**
+ * Action command issued when a momentary button service is activated.
+ * `path` is the device API endpoint (e.g. `evse/start_charging`).
+ * `body` is the JSON payload; WARP action endpoints require `null` (the default).
+ */
+type AccessoryCommand = {
+  path: string;
+  body?: unknown;
+};
+
 /** Service definition mapping device capabilities to HomeKit services */
 type AccessoryServiceDefinition = {
   id: string;
@@ -58,11 +69,13 @@ type AccessoryServiceDefinition = {
   subType?: string;
   bindOn?: boolean;
   bindOutletInUse?: boolean;
+  /** When set, the service acts as a momentary button issuing this API command on activation. */
+  command?: AccessoryCommand;
   defaultCharacteristics?: Record<string, CharacteristicValue>;
 };
 
 /** Export for external use */
-export type { AccessoryServiceDefinition };
+export type { AccessoryCommand, AccessoryServiceDefinition };
 
 /** Complete accessory definition catalog */
 type AccessoryDefinitionCatalog = {
@@ -83,6 +96,7 @@ type AccessoryRuntimeHandlers = {
   setOn(value: CharacteristicValue): Promise<void>;
   getOn(): Promise<CharacteristicValue>;
   getOutletInUse(): Promise<CharacteristicValue>;
+  runCommand(command: AccessoryCommand): Promise<void>;
 };
 
 type AccessoryDefinitionContext = {
@@ -284,6 +298,34 @@ const ACCESSORY_DEFINITION_CATALOG: AccessoryDefinitionCatalog = {
       },
     },
     {
+      id: 'start-charging-button',
+      service: 'Switch',
+      check: {
+        type: 'feature',
+        feature: 'evse',
+      },
+      nameSuffix: 'Start Charging',
+      subType: 'start-charging',
+      command: {
+        path: 'evse/start_charging',
+        body: null,
+      },
+    },
+    {
+      id: 'stop-charging-button',
+      service: 'Switch',
+      check: {
+        type: 'feature',
+        feature: 'evse',
+      },
+      nameSuffix: 'Stop Charging',
+      subType: 'stop-charging',
+      command: {
+        path: 'evse/stop_charging',
+        body: null,
+      },
+    },
+    {
       id: 'energy',
       service: 'EveConsumption',
       enabledWhen: {
@@ -323,6 +365,7 @@ function cloneAccessoryDefinitions(definitions: AccessoryServiceDefinition[]): A
     availability: definition.availability?.map((entry) => ({ ...entry })),
     valueSources: definition.valueSources?.map((entry) => ({ ...entry })),
     enabledWhen: definition.enabledWhen ? { ...definition.enabledWhen } : undefined,
+    command: definition.command ? { ...definition.command } : undefined,
     defaultCharacteristics: definition.defaultCharacteristics ? { ...definition.defaultCharacteristics } : undefined,
   }));
 }
@@ -346,6 +389,8 @@ function readServiceType(platform: WarpHomekitPlatform, serviceType: ServiceType
     return platform.Service.Battery;
   case 'ContactSensor':
     return platform.Service.ContactSensor;
+  case 'StatelessProgrammableSwitch':
+    return platform.Service.StatelessProgrammableSwitch;
   case 'EveConsumption':
     return platform.CustomServices?.Consumption;
   default:
@@ -415,6 +460,8 @@ function readCharacteristic(platform: WarpHomekitPlatform, key: string): unknown
     return platform.Characteristic.StatusLowBattery;
   case 'ContactSensorState':
     return platform.Characteristic.ContactSensorState;
+  case 'ProgrammableSwitchEvent':
+    return platform.Characteristic.ProgrammableSwitchEvent;
   case 'Consumption':
     return platform.CustomCharacteristics?.Consumption;
   case 'TotalConsumption':
@@ -566,7 +613,7 @@ function applyDefinition(context: Omit<AccessoryDefinitionContext, 'definitions'
     return;
   }
 
-  const hasBoundCharacteristics = Boolean(definition.bindOn || definition.bindOutletInUse)
+  const hasBoundCharacteristics = Boolean(definition.bindOn || definition.bindOutletInUse || definition.command)
     || Object.keys(definition.defaultCharacteristics ?? {}).length > 0
     || valueSources.length > 0;
   if (!hasBoundCharacteristics) {
@@ -592,6 +639,31 @@ function applyDefinition(context: Omit<AccessoryDefinitionContext, 'definitions'
   if (definition.bindOutletInUse) {
     service.getCharacteristic(context.platform.Characteristic.OutletInUse)
       .onGet(context.handlers.getOutletInUse);
+  }
+
+  if (definition.command) {
+    // Momentary button: activation triggers the API command, then resets to off.
+    const command = definition.command;
+    service.getCharacteristic(context.platform.Characteristic.On)
+      .onGet(async () => false)
+      .onSet(async (value: CharacteristicValue) => {
+        if (!value) {
+          return;
+        }
+
+        try {
+          await context.handlers.runCommand(command);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          context.platform.log.error(`Button command ${command.path} failed: ${errorMessage}`);
+          throw error;
+        } finally {
+          // Reset to off shortly after so the switch behaves as a stateless button.
+          setTimeout(() => {
+            service.updateCharacteristic(context.platform.Characteristic.On, false);
+          }, 2000);
+        }
+      });
   }
 
   if (isNewService) {
